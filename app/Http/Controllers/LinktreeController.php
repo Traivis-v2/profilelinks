@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -13,8 +12,6 @@ class LinktreeController extends Controller
 {
     private string $dataFile = 'linktree_data.json';
 
-    // ── Pages ────────────────────────────────────────────────────────────────
-
     public function index()
     {
         return view('index');
@@ -25,23 +22,17 @@ class LinktreeController extends Controller
         return view('admin');
     }
 
-    // ── Load data (public) ────────────────────────────────────────────────────
-
     public function load()
     {
         $data = $this->readData();
         return response()->json($data);
     }
 
-    // ── Auth ─────────────────────────────────────────────────────────────────
-
     public function auth(Request $request)
     {
-        $password  = $request->input('password', '');
-        $stored    = config('linktree.admin_password');
-
-        // Support both plain-text (from .env) and bcrypt hashes
-        $valid = $stored === $password || Hash::check($password, $stored);
+        $password = $request->input('password', '');
+        $stored   = config('linktree.admin_password');
+        $valid    = $stored === $password || Hash::check($password, $stored);
 
         if ($valid) {
             Session::put('linktree_admin', true);
@@ -57,8 +48,6 @@ class LinktreeController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    // ── Save data (admin only) ────────────────────────────────────────────────
-
     public function save(Request $request)
     {
         if (!Session::get('linktree_admin')) {
@@ -67,19 +56,47 @@ class LinktreeController extends Controller
 
         $data = $request->all();
 
-        // Sanitise — strip any PHP/script tags from text fields
         array_walk_recursive($data, function (&$val) {
             if (is_string($val)) {
                 $val = strip_tags($val, '<b><i><br>');
             }
         });
 
-        Storage::disk('local')->put($this->dataFile, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        Storage::disk('local')->put(
+            $this->dataFile,
+            json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+        );
 
         return response()->json(['ok' => true]);
     }
 
-    // ── YouTube proxy (key stays server-side) ─────────────────────────────────
+    public function upload(Request $request)
+    {
+        if (!Session::get('linktree_admin')) {
+            return response()->json(['ok' => false, 'error' => 'Unauthorized'], 401);
+        }
+
+        $file = $request->file('file');
+
+        if (!$file) {
+            return response()->json(['ok' => false, 'error' => 'No file provided'], 400);
+        }
+
+        // Validate it's an image
+        if (!in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
+            return response()->json(['ok' => false, 'error' => 'Only image files allowed'], 400);
+        }
+
+        // Max 5MB
+        if ($file->getSize() > 5 * 1024 * 1024) {
+            return response()->json(['ok' => false, 'error' => 'File too large (max 5MB)'], 400);
+        }
+
+        $path = $file->store('uploads', 'public');
+        $url  = Storage::disk('public')->url($path);
+
+        return response()->json(['ok' => true, 'url' => $url]);
+    }
 
     public function youtube(Request $request)
     {
@@ -115,12 +132,12 @@ class LinktreeController extends Controller
             return response()->json(['error' => 'Video not found'], 404);
         }
 
-        $snippet   = $items[0]['snippet'];
+        $snippet    = $items[0]['snippet'];
         $thumbnails = $snippet['thumbnails'] ?? [];
-        $thumb     = $thumbnails['high']['url']
-                  ?? $thumbnails['medium']['url']
-                  ?? $thumbnails['default']['url']
-                  ?? '';
+        $thumb      = $thumbnails['high']['url']
+                   ?? $thumbnails['medium']['url']
+                   ?? $thumbnails['default']['url']
+                   ?? '';
 
         return response()->json([
             'title' => $snippet['title'] ?? '',
@@ -129,8 +146,6 @@ class LinktreeController extends Controller
             'url'   => "https://www.youtube.com/watch?v={$videoId}",
         ]);
     }
-
-    // ── Change password ───────────────────────────────────────────────────────
 
     public function changePassword(Request $request)
     {
@@ -141,8 +156,7 @@ class LinktreeController extends Controller
         $current = $request->input('current', '');
         $new     = $request->input('password', '');
         $stored  = config('linktree.admin_password');
-
-        $valid = $stored === $current || Hash::check($current, $stored);
+        $valid   = $stored === $current || Hash::check($current, $stored);
 
         if (!$valid) {
             return response()->json(['ok' => false, 'error' => 'Current password is wrong']);
@@ -152,10 +166,9 @@ class LinktreeController extends Controller
             return response()->json(['ok' => false, 'error' => 'Min 6 characters']);
         }
 
-        // Write new hashed password to .env
-        $envPath   = base_path('.env');
+        $envPath    = base_path('.env');
         $envContent = file_get_contents($envPath);
-        $hashed    = Hash::make($new);
+        $hashed     = Hash::make($new);
 
         if (str_contains($envContent, 'ADMIN_PASSWORD=')) {
             $envContent = preg_replace('/^ADMIN_PASSWORD=.*/m', "ADMIN_PASSWORD={$hashed}", $envContent);
@@ -164,14 +177,10 @@ class LinktreeController extends Controller
         }
 
         file_put_contents($envPath, $envContent);
-
-        // Clear config cache so new password is picked up immediately
         \Artisan::call('config:clear');
 
         return response()->json(['ok' => true]);
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private function readData(): array
     {
@@ -190,38 +199,13 @@ class LinktreeController extends Controller
             'avatar'  => '',
             'banner'  => '',
             'socials' => [
-                'facebook'   => '',
-                'instagram'  => '',
-                'x'          => '',
-                'telegram'   => '',
-                'youtube'    => '',
-                'podcast'    => '',
-                'spotify'    => '',
-                'soundcloud' => '',
+                'facebook'   => '', 'instagram'  => '',
+                'x'          => '', 'telegram'   => '',
+                'youtube'    => '', 'podcast'    => '',
+                'spotify'    => '', 'soundcloud' => '',
             ],
-            'video' => [
-                'thumb' => '',
-                'title' => '',
-                'desc'  => '',
-                'link'  => '',
-            ],
+            'video' => ['thumb' => '', 'title' => '', 'desc' => '', 'link' => ''],
             'links' => [],
         ];
     }
-}
-public function upload(Request $request)
-{
-    if (!Session::get('linktree_admin')) {
-        return response()->json(['ok' => false, 'error' => 'Unauthorized'], 401);
-    }
-
-    $file = $request->file('file');
-    if (!$file) {
-        return response()->json(['ok' => false, 'error' => 'No file'], 400);
-    }
-
-    $path = $file->store('uploads', 'public');
-    $url = Storage::disk('public')->url($path);
-
-    return response()->json(['ok' => true, 'url' => $url]);
 }
