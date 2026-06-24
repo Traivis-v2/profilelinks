@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -207,4 +208,20 @@ class LinktreeController extends Controller
             'links' => [],
         ];
     }
+}
+public function upload(Request $request)
+{
+    if (!Session::get('linktree_admin')) {
+        return response()->json(['ok' => false, 'error' => 'Unauthorized'], 401);
+    }
+
+    $file = $request->file('file');
+    if (!$file) {
+        return response()->json(['ok' => false, 'error' => 'No file'], 400);
+    }
+
+    $path = $file->store('uploads', 'public');
+    $url = Storage::disk('public')->url($path);
+
+    return response()->json(['ok' => true, 'url' => $url]);
 }
