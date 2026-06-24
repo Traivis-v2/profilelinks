@@ -1,81 +1,58 @@
-# Ammar Hussein — Linktree
+<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-A self-hosted linktree built on Laravel + vanilla JS.
+<p align="center">
+<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+</p>
 
-## File structure
+## About Laravel
 
-```
-app/Http/Controllers/LinktreeController.php   ← all backend logic
-resources/views/index.blade.php               ← public page
-resources/views/admin.blade.php               ← admin panel
-routes/web.php                                ← URL routes
-config/linktree.php                           ← reads .env values
-.env.example                                  ← copy to .env on server
-.gitignore                                    ← keeps .env + data.json out of git
-```
+Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
 
----
+- [Simple, fast routing engine](https://laravel.com/docs/routing).
+- [Powerful dependency injection container](https://laravel.com/docs/container).
+- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
+- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
+- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
+- [Robust background job processing](https://laravel.com/docs/queues).
+- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
-## Deploy to Laravel Forge (step by step)
+Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
-### 1. Push to GitHub
-Push this project to your GitHub repo as normal.
+## Learning Laravel
 
-### 2. Create site on Forge
-- In Forge → your server → **New Site**
-- Domain: your domain
-- Project type: **Laravel**
-- Root: `/public`
+Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
 
-### 3. Connect GitHub repo
-- In Forge site → **Git Repository**
-- Connect your repo, branch: `main`
+In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
 
-### 4. Set environment variables on Forge
-In Forge site → **Environment** tab, add:
+You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
 
-```
-ADMIN_PASSWORD=choose_a_strong_password
-YOUTUBE_API_KEY=AIza...your_key_here
-APP_KEY=   ← run: php artisan key:generate
-APP_URL=https://yourdomain.com
-SESSION_DRIVER=file
+## Agentic Development
+
+Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+
+```bash
+composer require laravel/boost --dev
+
+php artisan boost:install
 ```
 
-> **Never put these in GitHub.** Forge's Environment tab is the right place.
+Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
-### 5. Deploy
-Click **Deploy Now** in Forge. It runs `composer install`, `php artisan migrate`, etc automatically.
+## Contributing
 
-### 6. Your URLs
-| URL | What it is |
-|-----|-----------|
-| `https://yourdomain.com/` | Public page (share this) |
-| `https://yourdomain.com/admin` | Admin panel (keep private) |
+Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
 
----
+## Code of Conduct
 
-## YouTube API Key (free)
+In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com)
-2. Create a new project
-3. Search **YouTube Data API v3** → Enable it
-4. Go to **Credentials** → Create **API Key**
-5. Copy it → paste into Forge Environment as `YOUTUBE_API_KEY`
+## Security Vulnerabilities
 
-The key **never touches the browser** — all YouTube fetches go through PHP on your server.
+If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
----
+## License
 
-## How data is stored
-
-All page content is saved to `/storage/app/linktree_data.json` on the server.
-This file is in `.gitignore` so it never goes to GitHub.
-Forge keeps it on the server between deploys.
-
----
-
-## First login
-- Go to `/admin`
-- Password: whatever you set as `ADMIN_PASSWORD` in Forge
-- Go to **Settings** tab → change password (it becomes bcrypt-hashed automatically)
+The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
