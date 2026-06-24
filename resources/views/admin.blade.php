@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Admin — Ammar Hussein</title>
 <meta name="robots" content="noindex, nofollow"/>
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f4fb;min-height:100vh;}
@@ -47,9 +48,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .avatar-upload-row{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
 .avatar-prev{width:74px;height:74px;border-radius:50%;border:2px dashed var(--p400);background:var(--p50);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:26px;color:var(--p400);flex-shrink:0;}
 .avatar-prev img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:none;}
-.up-btn{background:var(--p600);color:white;border:none;border-radius:9px;padding:9px 16px;font-size:12px;cursor:pointer;font-weight:600;display:block;margin-bottom:6px;}
+.up-btn{background:var(--p600);color:white;border:none;border-radius:9px;padding:9px 16px;font-size:12px;cursor:pointer;font-weight:600;display:inline-block;margin-bottom:6px;}
 .up-btn:hover{background:var(--p800);}
+.up-btn:disabled{opacity:0.5;cursor:not-allowed;}
 .up-note{font-size:11px;color:var(--muted);line-height:1.5;}
+.uploading{font-size:11px;color:var(--p600);margin-top:4px;display:none;}
 input[type=file]{display:none;}
 .soc-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
 .soc-dot{width:32px;height:32px;border-radius:50%;background:var(--p600);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -131,9 +134,10 @@ input[type=file]{display:none;}
   <div class="tab-body active" id="tab-profile">
     <div class="card">
       <div class="card-title">Banner image</div>
-      <div class="banner-prev-box" id="banner-prev-box"><img id="banner-prev-img" src="" alt=""/></div>
-      <button class="up-btn" onclick="document.getElementById('banner-file').click()">📁 Upload banner</button>
+      <div class="banner-prev-box"><img id="banner-prev-img" src="" alt=""/></div>
+      <button class="up-btn" id="banner-up-btn" onclick="document.getElementById('banner-file').click()">📁 Upload banner</button>
       <span class="up-note">Recommended: 1200×400px JPG/PNG</span>
+      <div class="uploading" id="banner-uploading">Uploading...</div>
       <input type="file" id="banner-file" accept="image/*" onchange="handleUpload(event,'banner')"/>
       <div class="field" style="margin-top:12px;"><label>Or paste URL</label><input id="a-banner" placeholder="https://..." oninput="prevBanner()"/></div>
     </div>
@@ -141,7 +145,11 @@ input[type=file]{display:none;}
       <div class="card-title">Profile photo & info</div>
       <div class="avatar-upload-row">
         <div class="avatar-prev" id="avatar-prev"><img id="avatar-prev-img" src="" alt=""/><span id="avatar-prev-ph">✦</span></div>
-        <div><button class="up-btn" onclick="document.getElementById('avatar-file').click()">📁 Upload photo</button><div class="up-note">JPG or PNG — your profile picture</div></div>
+        <div>
+          <button class="up-btn" id="avatar-up-btn" onclick="document.getElementById('avatar-file').click()">📁 Upload photo</button>
+          <div class="up-note">JPG or PNG — your profile picture</div>
+          <div class="uploading" id="avatar-uploading">Uploading...</div>
+        </div>
       </div>
       <input type="file" id="avatar-file" accept="image/*" onchange="handleUpload(event,'avatar')"/>
       <div class="field"><label>Or paste photo URL</label><input id="a-avatar" placeholder="https://..." oninput="prevAvatar()"/></div>
@@ -161,9 +169,9 @@ input[type=file]{display:none;}
   <div class="tab-body" id="tab-video">
     <div class="card">
       <div class="card-title">Highlighted video</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">The YouTube API key is stored securely on the server in <code>.env</code>. Just paste the YouTube URL below and click Fetch.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Paste YouTube URL and click Fetch to auto-fill everything.</p>
       <div class="yt-row">
-        <input id="v-yt-url" placeholder="Paste YouTube URL to auto-fill everything ↓"/>
+        <input id="v-yt-url" placeholder="Paste YouTube URL ↓"/>
         <button class="fetch-btn" id="v-fetch-btn" onclick="fetchFeaturedVideo()">Fetch</button>
       </div>
       <div class="field"><label>Thumbnail URL</label>
@@ -176,7 +184,7 @@ input[type=file]{display:none;}
   </div>
 
   <div class="tab-body" id="tab-links">
-    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Each row shows as a purple button. Paste YouTube URL → click Fetch YT to auto-fill.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">Each row shows as a purple button. Paste YouTube URL → Fetch YT to auto-fill.</p>
     <div id="links-list"></div>
     <button class="add-btn" onclick="addLink()">+ Add link row</button>
     <div style="height:70px;"></div>
@@ -196,7 +204,7 @@ input[type=file]{display:none;}
       <p style="font-size:12px;color:var(--muted);line-height:1.8;">
         Your API key lives in <code>.env</code> on the server as:<br/>
         <code style="background:var(--gray);padding:4px 8px;border-radius:6px;display:inline-block;margin-top:6px;">YOUTUBE_API_KEY=AIza...</code><br/><br/>
-        It is <strong>never exposed</strong> to the browser. All YouTube fetches go through the server.
+        It is <strong>never exposed</strong> to the browser.
       </p>
     </div>
   </div>
@@ -232,7 +240,7 @@ const socialDefs=[
 let state={name:"Ammar Hussein",sub:"",avatar:"",banner:"",
   socials:{facebook:"",instagram:"",x:"",telegram:"",youtube:"",podcast:"",spotify:"",soundcloud:""},
   video:{thumb:"",title:"",desc:"",link:""},links:[]};
-let avatarData="",bannerData="";
+
 const CSRF=document.querySelector('meta[name="csrf-token"]')?.content||"";
 
 function showToast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2500);}
@@ -244,8 +252,7 @@ async function doLogin(){
   if(data.ok){
     document.getElementById("login-wrap").style.display="none";
     document.getElementById("panel").style.display="block";
-    await loadState();
-    renderAdmin();
+    await loadState();renderAdmin();
   }else{
     document.getElementById("login-err").style.display="block";
   }
@@ -267,7 +274,7 @@ async function changePass(){
   if(nw!==cf){msg.style.color="#c0392b";msg.textContent="Passwords don't match.";return;}
   const res=await fetch("/api/change-password",{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-TOKEN":CSRF},body:JSON.stringify({current:cur,password:nw})});
   const data=await res.json();
-  if(data.ok){msg.style.color="#27ae60";msg.textContent="Password updated!";document.getElementById("pw-cur").value="";document.getElementById("pw-new").value="";document.getElementById("pw-cf").value="";}
+  if(data.ok){msg.style.color="#27ae60";msg.textContent="Password updated!";}
   else{msg.style.color="#c0392b";msg.textContent=data.error||"Failed.";}
 }
 
@@ -277,28 +284,61 @@ function switchTab(name,btn){
   btn.classList.add("active");document.getElementById("tab-"+name).classList.add("active");
 }
 
-function handleUpload(e,type){
-  const file=e.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const data=ev.target.result;
-    if(type==="avatar"){
-      avatarData=data;
-      const img=document.getElementById("avatar-prev-img");img.src=data;img.style.display="block";
-      document.getElementById("avatar-prev-ph").style.display="none";
-      document.getElementById("a-avatar").value="";
-    }else{
-      bannerData=data;
-      const img=document.getElementById("banner-prev-img");img.src=data;img.style.display="block";
-      document.getElementById("a-banner").value="";
+// ── Image upload — sends to server, gets back a URL ──────────────────────────
+async function handleUpload(e, type){
+  const file = e.target.files[0]; if(!file) return;
+  const upBtn  = document.getElementById(type+"-up-btn");
+  const upMsg  = document.getElementById(type+"-uploading");
+  upBtn.disabled = true; upMsg.style.display = "block";
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "X-CSRF-TOKEN": CSRF },
+      body: formData
+    });
+    const data = await res.json();
+    if(data.ok){
+      if(type === "avatar"){
+        document.getElementById("a-avatar").value = data.url;
+        const img = document.getElementById("avatar-prev-img");
+        img.src = data.url; img.style.display = "block";
+        document.getElementById("avatar-prev-ph").style.display = "none";
+      } else {
+        document.getElementById("a-banner").value = data.url;
+        const img = document.getElementById("banner-prev-img");
+        img.src = data.url; img.style.display = "block";
+      }
+      showToast("Uploaded ✓");
+    } else {
+      showToast("Upload failed: " + (data.error||"unknown"));
     }
-    showToast("Uploaded ✓");
-  };
-  reader.readAsDataURL(file);
+  } catch(err){
+    showToast("Upload failed");
+  }
+  upBtn.disabled = false; upMsg.style.display = "none";
 }
-function prevAvatar(){const url=document.getElementById("a-avatar").value.trim();const img=document.getElementById("avatar-prev-img");const ph=document.getElementById("avatar-prev-ph");if(url){img.src=url;img.style.display="block";ph.style.display="none";avatarData="";}else{img.style.display="none";ph.style.display="block";}}
-function prevBanner(){const url=document.getElementById("a-banner").value.trim();const img=document.getElementById("banner-prev-img");if(url){img.src=url;img.style.display="block";bannerData="";}else{img.style.display="none";}}
-function prevThumb(a,b){const url=document.getElementById(a).value.trim();const img=document.getElementById(b);if(url){img.src=url;img.style.display="block";}else{img.style.display="none";}}
+
+function prevAvatar(){
+  const url=document.getElementById("a-avatar").value.trim();
+  const img=document.getElementById("avatar-prev-img");
+  const ph=document.getElementById("avatar-prev-ph");
+  if(url){img.src=url;img.style.display="block";ph.style.display="none";}
+  else{img.style.display="none";ph.style.display="block";}
+}
+function prevBanner(){
+  const url=document.getElementById("a-banner").value.trim();
+  const img=document.getElementById("banner-prev-img");
+  if(url){img.src=url;img.style.display="block";}else{img.style.display="none";}
+}
+function prevThumb(a,b){
+  const url=document.getElementById(a).value.trim();
+  const img=document.getElementById(b);
+  if(url){img.src=url;img.style.display="block";}else{img.style.display="none";}
+}
 
 async function loadState(){
   try{const res=await fetch("/api/load");state=await res.json();}catch(e){}
@@ -306,8 +346,8 @@ async function loadState(){
 function renderAdmin(){
   document.getElementById("a-name").value=state.name||"";
   document.getElementById("a-sub").value=state.sub||"";
-  document.getElementById("a-avatar").value=(state.avatar||"").startsWith("data:")?"":state.avatar||"";
-  document.getElementById("a-banner").value=(state.banner||"").startsWith("data:")?"":state.banner||"";
+  document.getElementById("a-avatar").value=state.avatar||"";
+  document.getElementById("a-banner").value=state.banner||"";
   if(state.avatar){const i=document.getElementById("avatar-prev-img");i.src=state.avatar;i.style.display="block";document.getElementById("avatar-prev-ph").style.display="none";}
   if(state.banner){const i=document.getElementById("banner-prev-img");i.src=state.banner;i.style.display="block";}
   document.getElementById("v-thumb").value=state.video?.thumb||"";
@@ -336,8 +376,8 @@ function renderLinksAdmin(){
 function collectState(){
   state.name=document.getElementById("a-name").value;
   state.sub=document.getElementById("a-sub").value;
-  state.avatar=avatarData||document.getElementById("a-avatar").value;
-  state.banner=bannerData||document.getElementById("a-banner").value;
+  state.avatar=document.getElementById("a-avatar").value;
+  state.banner=document.getElementById("a-banner").value;
   if(!state.socials)state.socials={};
   socialDefs.forEach(s=>{state.socials[s.id]=document.getElementById("s-"+s.id)?.value.trim()||"";});
   state.video={thumb:document.getElementById("v-thumb").value,title:document.getElementById("v-title").value,desc:document.getElementById("v-desc").value,link:document.getElementById("v-link").value};
@@ -348,7 +388,7 @@ async function saveAll(){
   collectState();
   const res=await fetch("/api/save",{method:"POST",headers:{"Content-Type":"application/json","X-CSRF-TOKEN":CSRF},body:JSON.stringify(state)});
   const data=await res.json();
-  if(data.ok){showToast("Saved & published ✓");}else{showToast("Error saving: "+( data.error||"unknown"));}
+  if(data.ok){showToast("Saved & published ✓");}else{showToast("Error: "+(data.error||"unknown"));}
 }
 function addLink(){collectState();state.links.push({thumb:"",label:"",url:""});renderLinksAdmin();}
 function removeLink(i){collectState();state.links.splice(i,1);renderLinksAdmin();}
@@ -387,7 +427,7 @@ function openPreview(){
   const socHtml=socialDefs.filter(sd=>s.socials?.[sd.id]).map(sd=>`<a href="${s.socials[sd.id]}" target="_blank" style="width:40px;height:40px;border-radius:50%;background:#534AB7;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0;">${svgsFull[sd.id]}</a>`).join("");
   const linksHtml=(s.links||[]).filter(l=>l.label||l.url).map(l=>`<a href="${l.url||'#'}" target="_blank" style="display:flex;align-items:center;gap:10px;background:#534AB7;border-radius:12px;padding:9px 12px;text-decoration:none;"><div style="width:42px;height:42px;border-radius:8px;background:#7F77DD;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;">${l.thumb?`<img src="${l.thumb}" style="width:100%;height:100%;object-fit:cover;"/>`:`<svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" fill="white" opacity="0.5"/></svg>`}</div><div style="flex:1;font-size:13px;color:white;direction:rtl;text-align:right;font-weight:500;line-height:1.4;">${l.label}</div><span style="color:white;opacity:0.7;font-size:18px;">›</span></a>`).join("");
   const vl=s.video?.link||"#";
-  const vidHtml=(s.video?.title||s.video?.thumb)?`<div style="margin:0 14px 14px;border:2.5px solid #7F77DD;border-radius:16px;overflow:hidden;background:#EEEDFE;cursor:pointer;" onclick="window.open('${vl}','_blank')">${s.video.thumb?`<img src="${s.video.thumb}" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;"/>`:`<div style="width:100%;aspect-ratio:16/9;background:#AFA9EC;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="44" height="44"><path d="M21.543 6.498C22 8.28 22 12 22 12s0 3.72-.457 5.502c-.254.985-.997 1.76-1.938 2.022C17.896 20 12 20 12 20s-5.893 0-7.605-.476c-.945-.266-1.687-1.04-1.938-2.022C2 15.72 2 12 2 12s0-3.72.457-5.502c.254-.985.997-1.76 1.938-2.022C6.107 4 12 4 12 4s5.896 0 7.605.476c.945.266 1.687 1.04 1.938 2.022zM10 15.5l6-3.5-6-3.5v7z" fill="#534AB7"/></svg></div>`}<div style="padding:10px 14px 12px;"><div style="font-size:14px;font-weight:600;color:#26215C;direction:rtl;">${s.video.title}</div>${s.video.desc?`<div style="font-size:12px;color:#534AB7;margin-top:4px;direction:rtl;">${s.video.desc}</div>`:""}</div></div>`:"";
+  const vidHtml=(s.video?.title||s.video?.thumb)?`<div style="margin:0 14px 14px;border:2.5px solid #7F77DD;border-radius:16px;overflow:hidden;background:#EEEDFE;cursor:pointer;" onclick="window.open('${vl}','_blank')">${s.video.thumb?`<img src="${s.video.thumb}" style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;"/>`:`<div style="width:100%;aspect-ratio:16/9;background:#AFA9EC;display:flex;align-items:center;justify-content:center;"></div>`}<div style="padding:10px 14px 12px;"><div style="font-size:14px;font-weight:600;color:#26215C;direction:rtl;">${s.video.title}</div>${s.video.desc?`<div style="font-size:12px;color:#534AB7;margin-top:4px;direction:rtl;">${s.video.desc}</div>`:""}</div></div>`:"";
   const banStyle=s.banner?`background:url('${s.banner}') center/cover no-repeat`:`background:linear-gradient(135deg,#3C3489,#7F77DD)`;
   const avHtml=s.avatar?`<img src="${s.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`:"✦";
   document.getElementById("prev-frame").innerHTML=`<button class="prev-close" onclick="closePrev()">×</button><div style="${banStyle};height:130px;"></div><div style="display:flex;flex-direction:column;align-items:center;margin-top:-44px;position:relative;z-index:2;padding:0 16px 12px;"><div style="width:88px;height:88px;border-radius:50%;border:4px solid white;background:#CECBF6;display:flex;align-items:center;justify-content:center;font-size:28px;color:#534AB7;overflow:hidden;">${avHtml}</div><div style="font-size:19px;font-weight:700;color:#26215C;margin-top:10px;text-align:center;">${s.name}</div><div style="font-size:13px;color:#534AB7;margin-top:3px;">${s.sub}</div></div><div style="display:flex;gap:12px;justify-content:center;padding:8px 16px 18px;flex-wrap:wrap;">${socHtml}</div>${vidHtml}<div style="padding:0 14px;display:flex;flex-direction:column;gap:9px;padding-bottom:28px;">${linksHtml}</div>`;
