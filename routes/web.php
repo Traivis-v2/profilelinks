@@ -17,4 +17,5 @@ Route::prefix('api')->group(function () {
     Route::post('/save',           [LinktreeController::class, 'save']);
     Route::get('/youtube',         [LinktreeController::class, 'youtube']);
     Route::post('/change-password',[LinktreeController::class, 'changePassword']);
+    Route::post('/upload', [LinktreeController::class, 'upload']);
 });
